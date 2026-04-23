@@ -1,0 +1,7 @@
+streamlit
+numpy
+joblib
+Pillow
+scikit-learn
+xgboost
+tflite-runtime
