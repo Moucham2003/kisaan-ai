@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import json
 from PIL import Image
-import tflite_runtime.interpreter as tflite
+import tensorflow as tf
 
 # ─── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -25,7 +25,7 @@ def load_models():
     with open("class_names.json") as f:
         class_names = json.load(f)
 
-    interpreter = tflite.Interpreter(model_path="disease_model_FINAL.tflite")
+    interpreter = tf.lite.Interpreter(model_path="disease_model_FINAL.tflite")
     interpreter.allocate_tensors()
 
     return (crop_model, crop_encoder,
@@ -142,8 +142,7 @@ with tab3:
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="Uploaded Leaf", use_column_width=True)
-
+        st.image(image, caption="Uploaded Leaf", use_container_width=True)
         if st.button("🔍 Detect Disease", use_container_width=True):
             with st.spinner("Analyzing leaf..."):
 
