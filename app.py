@@ -1,3 +1,4 @@
+from ai_edge_litert.interpreter import Interpreter
 import streamlit as st
 import numpy as np
 import joblib
@@ -15,19 +16,16 @@ st.set_page_config(
 # ─── Load Models ───────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_models():
-    crop_model      = joblib.load("crop_model.pkl")
-    crop_encoder    = joblib.load("crop_encoder.pkl")
-    fert_model      = joblib.load("fertilizer_model.pkl")
-    soil_enc        = joblib.load("soil_encoder.pkl")
-    crop_type_enc   = joblib.load("crop_type_encoder.pkl")
-    fert_enc        = joblib.load("fertilizer_encoder.pkl")
-
+    crop_model = joblib.load("crop_model.pkl")
+    crop_encoder = joblib.load("crop_encoder.pkl")
+    fert_model = joblib.load("fertilizer_model.pkl")
+    soil_enc = joblib.load("soil_encoder.pkl")
+    crop_type_enc = joblib.load("crop_type_encoder.pkl")
+    fert_enc = joblib.load("fertilizer_encoder.pkl")
     with open("class_names.json") as f:
         class_names = json.load(f)
-
-   interpreter = tf.lite.Interpreter(model_path="disease_model_FINAL.tflite")
+    interpreter = Interpreter(model_path="disease_model_FINAL.tflite")
     interpreter.allocate_tensors()
-
     return (crop_model, crop_encoder,
             fert_model, soil_enc, crop_type_enc, fert_enc,
             class_names, interpreter)
