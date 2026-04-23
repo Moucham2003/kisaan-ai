@@ -25,7 +25,7 @@ def load_models():
     with open("class_names.json") as f:
         class_names = json.load(f)
 
-    interpreter = tf.lite.Interpreter(model_path="disease_model_FINAL.tflite")
+   interpreter = tf.lite.Interpreter(model_path="disease_model_FINAL.tflite")
     interpreter.allocate_tensors()
 
     return (crop_model, crop_encoder,
