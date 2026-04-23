@@ -4,4 +4,4 @@ joblib
 Pillow
 scikit-learn
 xgboost
-tensorflow-cpu
+tensorflow==2.15.1
