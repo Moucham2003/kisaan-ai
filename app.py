@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 import json
 from PIL import Image
-import tensorflow as tf
+from ai_edge_litert.interpreter import Interpreter
 
 # ─── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
