@@ -4,4 +4,4 @@ joblib
 Pillow
 scikit-learn
 xgboost
-tflite-runtime
+tensorflow-cpu
