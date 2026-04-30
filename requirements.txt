@@ -5,3 +5,4 @@ Pillow
 scikit-learn
 xgboost
 ai-edge-litert
+matplotlib
