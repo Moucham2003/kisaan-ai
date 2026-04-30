@@ -5,6 +5,8 @@ import joblib
 import json
 from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # ─── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -73,6 +75,45 @@ with tab1:
 
         st.success(f"✅ Recommended Crop: **{crop_name.upper()}**")
         st.balloons()
+
+        # ── Confidence / Accuracy Graph ──────────────────────────────────────
+        if hasattr(crop_model, "predict_proba"):
+            proba = crop_model.predict_proba(features)[0]
+            all_crops = crop_encoder.inverse_transform(np.arange(len(proba)))
+
+            top_n = 10
+            top_idx = np.argsort(proba)[::-1][:top_n]
+            top_crops = all_crops[top_idx]
+            top_proba = proba[top_idx] * 100
+
+            fig, ax = plt.subplots(figsize=(8, 4))
+            colors = ["#2ecc71" if c == crop_name else "#3498db" for c in top_crops]
+            bars = ax.barh(top_crops[::-1], top_proba[::-1], color=colors[::-1], edgecolor="white", height=0.6)
+
+            for bar, val in zip(bars, top_proba[::-1]):
+                ax.text(val + 0.5, bar.get_y() + bar.get_height() / 2,
+                        f"{val:.1f}%", va="center", fontsize=9, color="#2c3e50")
+
+            ax.set_xlabel("Confidence (%)", fontsize=10)
+            ax.set_title("🌾 Top Crop Predictions — Model Confidence", fontsize=12, fontweight="bold", pad=12)
+            ax.set_xlim(0, min(top_proba[0] * 1.25, 100))
+            ax.tick_params(axis="y", labelsize=9)
+            ax.tick_params(axis="x", labelsize=9)
+            ax.spines[["top", "right"]].set_visible(False)
+            ax.grid(axis="x", linestyle="--", alpha=0.4)
+
+            recommended_patch = mpatches.Patch(color="#2ecc71", label=f"Recommended: {crop_name.title()}")
+            others_patch = mpatches.Patch(color="#3498db", label="Other candidates")
+            ax.legend(handles=[recommended_patch, others_patch], fontsize=8, loc="lower right")
+
+            fig.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
+
+            st.caption(
+                f"The model is **{top_proba[0]:.1f}% confident** in recommending **{crop_name.title()}**. "
+                "The chart shows the top 10 most likely crops for your soil and climate inputs."
+            )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — FERTILIZER RECOMMENDATION
