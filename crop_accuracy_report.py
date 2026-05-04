@@ -244,7 +244,87 @@ st.pyplot(fig4)
 plt.close(fig4)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 5 — Accuracy Gauge (donut)
+# CHART 5 — Accuracy Curve (Learning Curve)
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown("---")
+st.subheader("📉 Accuracy Curve (Learning Curve)")
+st.caption(
+    "Shows how training and cross-validation accuracy change as more data is used. "
+    "A narrowing gap between the two lines indicates a well-generalising model."
+)
+
+@st.cache_data
+def compute_learning_curve(_model, X, y):
+    """Compute training & CV accuracy at increasing training-set sizes."""
+    from sklearn.model_selection import learning_curve as skl_lc
+    train_sizes, train_scores, val_scores = skl_lc(
+        _model, X, y,
+        train_sizes=np.linspace(0.10, 1.0, 10),
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),
+        scoring="accuracy",
+        n_jobs=-1,
+    )
+    return train_sizes, train_scores, val_scores
+
+train_sizes, train_scores, val_scores = compute_learning_curve(crop_model, X, y_enc)
+
+train_mean = train_scores.mean(axis=1) * 100
+train_std  = train_scores.std(axis=1)  * 100
+val_mean   = val_scores.mean(axis=1)   * 100
+val_std    = val_scores.std(axis=1)    * 100
+
+fig_lc, ax_lc = plt.subplots(figsize=(10, 5))
+
+# Training accuracy line
+ax_lc.plot(train_sizes, train_mean, "o-", color="#1565c0",
+           linewidth=2.2, markersize=6, label="Training Accuracy")
+ax_lc.fill_between(train_sizes,
+                   train_mean - train_std,
+                   train_mean + train_std,
+                   alpha=0.15, color="#1565c0")
+
+# Validation accuracy line
+ax_lc.plot(train_sizes, val_mean, "s-", color=GREEN,
+           linewidth=2.2, markersize=6, label="Cross-Validation Accuracy")
+ax_lc.fill_between(train_sizes,
+                   val_mean - val_std,
+                   val_mean + val_std,
+                   alpha=0.15, color=GREEN)
+
+# Annotate final values
+ax_lc.annotate(f"{train_mean[-1]:.1f}%",
+               xy=(train_sizes[-1], train_mean[-1]),
+               xytext=(8, -14), textcoords="offset points",
+               fontsize=9, color="#1565c0", fontweight="bold")
+ax_lc.annotate(f"{val_mean[-1]:.1f}%",
+               xy=(train_sizes[-1], val_mean[-1]),
+               xytext=(8, 6), textcoords="offset points",
+               fontsize=9, color=GREEN, fontweight="bold")
+
+ax_lc.set_xlabel("Training Samples Used", fontsize=11)
+ax_lc.set_ylabel("Accuracy (%)", fontsize=11)
+ax_lc.set_title("Learning Curve — Training vs Cross-Validation Accuracy",
+                fontsize=13, fontweight="bold")
+ax_lc.set_ylim(max(0, min(train_mean.min(), val_mean.min()) - 10), 105)
+ax_lc.legend(fontsize=10, loc="lower right")
+ax_lc.grid(alpha=0.3)
+ax_lc.spines[["top", "right"]].set_visible(False)
+fig_lc.tight_layout()
+st.pyplot(fig_lc)
+plt.close(fig_lc)
+
+# Insight callout
+gap = float(train_mean[-1] - val_mean[-1])
+if gap < 3:
+    insight = f"✅ Excellent generalisation — training/CV gap is only **{gap:.1f}%**. The model is not overfitting."
+elif gap < 8:
+    insight = f"⚠️ Mild overfitting — training/CV gap is **{gap:.1f}%**. Adding more data or regularisation may help."
+else:
+    insight = f"🔴 Significant overfitting — training/CV gap is **{gap:.1f}%**. Consider more data or a simpler model."
+st.info(insight)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHART 6 — Accuracy Gauge (donut)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("---")
 c_gauge, c_prec = st.columns(2)
@@ -266,7 +346,7 @@ with c_gauge:
     plt.close(fig5)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 6 — Precision / Recall bar per class
+# CHART 7 — Precision / Recall bar per class
 # ══════════════════════════════════════════════════════════════════════════════
 with c_prec:
     st.subheader("📋 Precision vs Recall (per crop)")
