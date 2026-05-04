@@ -244,22 +244,22 @@ st.pyplot(fig4)
 plt.close(fig4)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 5 — Accuracy Curve (Learning Curve)
+# CHART 5 — Training History: Loss Curve + Accuracy Curve (side-by-side)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("---")
-st.subheader("📉 Accuracy Curve (Learning Curve)")
+st.subheader("📉 Training History — XGBoost | Crop Recommendation")
 st.caption(
-    "Shows how training and cross-validation accuracy change as more data is used. "
-    "A narrowing gap between the two lines indicates a well-generalising model."
+    "Shows how Loss (100 − Accuracy) and Accuracy evolve as more training data is used. "
+    "Shaded bands = ±1 std dev across 5-fold CV. "
+    "Green dashed line marks the training size with the best validation accuracy."
 )
 
 @st.cache_data
 def compute_learning_curve(_model, X, y):
-    """Compute training & CV accuracy at increasing training-set sizes."""
     from sklearn.model_selection import learning_curve as skl_lc
     train_sizes, train_scores, val_scores = skl_lc(
         _model, X, y,
-        train_sizes=np.linspace(0.10, 1.0, 10),
+        train_sizes=np.linspace(0.15, 1.0, 8),
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),
         scoring="accuracy",
         n_jobs=-1,
@@ -268,53 +268,85 @@ def compute_learning_curve(_model, X, y):
 
 train_sizes, train_scores, val_scores = compute_learning_curve(crop_model, X, y_enc)
 
-train_mean = train_scores.mean(axis=1) * 100
-train_std  = train_scores.std(axis=1)  * 100
-val_mean   = val_scores.mean(axis=1)   * 100
-val_std    = val_scores.std(axis=1)    * 100
+train_acc_mean = train_scores.mean(axis=1) * 100
+train_acc_std  = train_scores.std(axis=1)  * 100
+val_acc_mean   = val_scores.mean(axis=1)   * 100
+val_acc_std    = val_scores.std(axis=1)    * 100
 
-fig_lc, ax_lc = plt.subplots(figsize=(10, 5))
+# Loss = 100 - Accuracy  (mirrors the fertilizer report convention)
+train_loss_mean = 100 - train_acc_mean
+train_loss_std  = train_acc_std
+val_loss_mean   = 100 - val_acc_mean
+val_loss_std    = val_acc_std
 
-# Training accuracy line
-ax_lc.plot(train_sizes, train_mean, "o-", color="#1565c0",
-           linewidth=2.2, markersize=6, label="Training Accuracy")
-ax_lc.fill_between(train_sizes,
-                   train_mean - train_std,
-                   train_mean + train_std,
-                   alpha=0.15, color="#1565c0")
+# Best size = training size with highest val accuracy
+best_idx  = int(np.argmax(val_acc_mean))
+best_size = int(train_sizes[best_idx])
 
-# Validation accuracy line
-ax_lc.plot(train_sizes, val_mean, "s-", color=GREEN,
-           linewidth=2.2, markersize=6, label="Cross-Validation Accuracy")
-ax_lc.fill_between(train_sizes,
-                   val_mean - val_std,
-                   val_mean + val_std,
-                   alpha=0.15, color=GREEN)
+BLUE = "#1565c0"
+RED2 = "#e53935"
 
-# Annotate final values
-ax_lc.annotate(f"{train_mean[-1]:.1f}%",
-               xy=(train_sizes[-1], train_mean[-1]),
-               xytext=(8, -14), textcoords="offset points",
-               fontsize=9, color="#1565c0", fontweight="bold")
-ax_lc.annotate(f"{val_mean[-1]:.1f}%",
-               xy=(train_sizes[-1], val_mean[-1]),
-               xytext=(8, 6), textcoords="offset points",
-               fontsize=9, color=GREEN, fontweight="bold")
+fig_hist, (ax_loss, ax_acc) = plt.subplots(1, 2, figsize=(14, 5))
+fig_hist.suptitle(
+    "Training History — XGBoost | Crop Recommendation",
+    fontsize=14, fontweight="bold"
+)
 
-ax_lc.set_xlabel("Training Samples Used", fontsize=11)
-ax_lc.set_ylabel("Accuracy (%)", fontsize=11)
-ax_lc.set_title("Learning Curve — Training vs Cross-Validation Accuracy",
-                fontsize=13, fontweight="bold")
-ax_lc.set_ylim(max(0, min(train_mean.min(), val_mean.min()) - 10), 105)
-ax_lc.legend(fontsize=10, loc="lower right")
-ax_lc.grid(alpha=0.3)
-ax_lc.spines[["top", "right"]].set_visible(False)
-fig_lc.tight_layout()
-st.pyplot(fig_lc)
-plt.close(fig_lc)
+# ── Left: Loss Curve ──────────────────────────────────────────────────────────
+ax_loss.plot(train_sizes, train_loss_mean, "o-", color=BLUE,
+             linewidth=2.2, markersize=6, label="Train Loss")
+ax_loss.fill_between(train_sizes,
+                     train_loss_mean - train_loss_std,
+                     train_loss_mean + train_loss_std,
+                     alpha=0.15, color=BLUE)
+
+ax_loss.plot(train_sizes, val_loss_mean, "o-", color=RED2,
+             linewidth=2.2, markersize=6, label="Val Loss")
+ax_loss.fill_between(train_sizes,
+                     val_loss_mean - val_loss_std,
+                     val_loss_mean + val_loss_std,
+                     alpha=0.18, color=RED2)
+
+ax_loss.set_xlabel("Training Samples", fontsize=11)
+ax_loss.set_ylabel("Loss (100 − Accuracy %)", fontsize=11)
+ax_loss.set_title("Loss Curve", fontsize=12, fontweight="bold")
+ax_loss.legend(fontsize=10)
+ax_loss.grid(alpha=0.3)
+ax_loss.spines[["top", "right"]].set_visible(False)
+
+# ── Right: Accuracy Curve ─────────────────────────────────────────────────────
+ax_acc.plot(train_sizes, train_acc_mean, "o-", color=BLUE,
+            linewidth=2.2, markersize=6, label="Train Acc")
+ax_acc.fill_between(train_sizes,
+                    train_acc_mean - train_acc_std,
+                    train_acc_mean + train_acc_std,
+                    alpha=0.15, color=BLUE)
+
+ax_acc.plot(train_sizes, val_acc_mean, "o-", color=RED2,
+            linewidth=2.2, markersize=6, label="Val Acc")
+ax_acc.fill_between(train_sizes,
+                    val_acc_mean - val_acc_std,
+                    val_acc_mean + val_acc_std,
+                    alpha=0.18, color=RED2)
+
+# Green dashed vertical line at best size
+ax_acc.axvline(best_size, color=GREEN, linewidth=1.8, linestyle="--",
+               label=f"Best Size={best_size}")
+
+ax_acc.set_xlabel("Training Samples", fontsize=11)
+ax_acc.set_ylabel("Accuracy (%)", fontsize=11)
+ax_acc.set_title("Accuracy Curve", fontsize=12, fontweight="bold")
+ax_acc.set_ylim(max(0, min(train_acc_mean.min(), val_acc_mean.min()) - 5), 105)
+ax_acc.legend(fontsize=10)
+ax_acc.grid(alpha=0.3)
+ax_acc.spines[["top", "right"]].set_visible(False)
+
+fig_hist.tight_layout()
+st.pyplot(fig_hist)
+plt.close(fig_hist)
 
 # Insight callout
-gap = float(train_mean[-1] - val_mean[-1])
+gap = float(train_acc_mean[-1] - val_acc_mean[-1])
 if gap < 3:
     insight = f"✅ Excellent generalisation — training/CV gap is only **{gap:.1f}%**. The model is not overfitting."
 elif gap < 8:
